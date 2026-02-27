@@ -59,50 +59,43 @@
 </footer>
 <button id="pay-btn">Pay ₹100</button>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+document.getElementById("pay-btn").onclick = async function () {
 
-    const payBtn = document.getElementById("pay-btn");
+    // 1️⃣ Call backend to create order
+    const response = await fetch("http://localhost:5000/create-order", {
+        method: "POST"
+    });
 
-    if (!payBtn) {
-        console.error("Pay button not found");
-        return;
-    }
+    const order = await response.json();
 
-    payBtn.onclick = async function () {
+    console.log("Order from backend:", order);
 
-        const response = await fetch("http://localhost:5000/create-order", {
-            method: "POST"
-        });
+    // 2️⃣ Use order.id correctly
+    const options = {
+        key: "rzp_live_SLJCOBqfFovpLm",   // OR rzp_test_xxxxx
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.id,      // ✅ This must exist
+        name: "Zenith Scholars",
+        description: "Course Payment",
+        handler: async function (response) {
 
-        const order = await response.json();
+            await fetch("http://localhost:5000/verify-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(response)
+            });
 
-        const options = {
-            key:"rzp_live_SLJCOBqfFovpLm",
-            amount: order.amount,
-            currency: order.currency,
-            order_id: order.id,
-            name: "Zenith Scholars",
-            description: "Course Payment",
-            handler: async function (response) {
-
-                await fetch("http://localhost:5000/verify-payment", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(response)
-                });
-
-                alert("Payment Successful!");
-            }
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
+            alert("Payment Successful!");
+        }
     };
 
-});
+    const rzp = new Razorpay(options);
+    rzp.open();
+};
 </script>
+
 </body>
 
 

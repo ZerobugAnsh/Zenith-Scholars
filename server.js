@@ -1,7 +1,7 @@
 require("dotenv").config();
 require("dotenv").config();
 
-
+console.log("Order created:", order.id);
 console.log("KEY SECRET:", process.env.RAZORPAY_KEY_SECRET);
 const express = require("express");
 const Razorpay = require("razorpay");
