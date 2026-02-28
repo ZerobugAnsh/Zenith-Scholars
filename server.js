@@ -1,8 +1,5 @@
 require("dotenv").config();
-require("dotenv").config();
 
-
-console.log("KEY SECRET:", process.env.RAZORPAY_KEY_SECRET);
 const express = require("express");
 const Razorpay = require("razorpay");
 const cors = require("cors");
@@ -12,37 +9,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔑 Replace with your real keys "rzp_test_SLIGESsldVkADb"
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-// Create Order
 app.post("/create-order", async (req, res) => {
     try {
         const options = {
-            amount: 100, // ₹500 (amount in paise)
+            amount: 100,
             currency: "INR",
             receipt: "receipt_order_1"
         };
-        console.log("Order created:", order.id);
 
         const order = await razorpay.orders.create(options);
+
+        console.log("Order created:", order.id);
+
         res.json(order);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: "Order creation failed" });
     }
 });
 
-// Verify Payment
 app.post("/verify-payment", (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expectedSignature = crypto
-        .createHmac("sha256", "YOUR_KEY_SECRET")
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
         .update(body)
         .digest("hex");
 
