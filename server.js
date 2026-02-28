@@ -22,7 +22,9 @@ app.post("/create-order", async (req, res) => {
             receipt: "receipt_order_1"
         };
 
-        const order = await razorpay.orders.create(options);
+      const order = await response.json();
+      console.log("Order object:", order);
+console.log("Order ID:", order.id);
 
         console.log("Order created:", order.id);
 
