@@ -1,7 +1,7 @@
 require("dotenv").config();
 require("dotenv").config();
 
-console.log("Order created:", order.id);
+
 console.log("KEY SECRET:", process.env.RAZORPAY_KEY_SECRET);
 const express = require("express");
 const Razorpay = require("razorpay");
@@ -26,6 +26,7 @@ app.post("/create-order", async (req, res) => {
             currency: "INR",
             receipt: "receipt_order_1"
         };
+        console.log("Order created:", order.id);
 
         const order = await razorpay.orders.create(options);
         res.json(order);
@@ -52,6 +53,8 @@ app.post("/verify-payment", (req, res) => {
     }
 });
 
-app.listen(5000, () => {
-    console.log("Server running on port 5000");
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
