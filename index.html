@@ -60,63 +60,45 @@
 <button id="pay-btn">Pay ₹100</button>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-document.getElementById("pay-btn").onclick = async function () {
+document.addEventListener("DOMContentLoaded", function () {
 
-    try {
-        // 1️⃣ Create order from backend
-        const response = await fetch("https://zenithscholars.onrender.com/create-order", {
-            method: "POST"
-        });
+    console.log("DOM loaded");
 
-        if (!response.ok) {
-            alert("Order creation failed");
-            console.error("Backend error:", response.status);
-            return;
+    document.getElementById("pay-btn").onclick = async function () {
+
+        console.log("Button clicked");
+
+        try {
+            const response = await fetch("https://zenithscholars.onrender.com/create-order", {
+                method: "POST"
+            });
+
+            const order = await response.json();
+            console.log("Order:", order);
+
+            const options = {
+                key: "rzp_live_SLJCOBqfFovpLm",
+                amount: order.amount,
+                currency: order.currency,
+                order_id: order.id,
+                name: "Zenith Scholars",
+                description: "Course Payment",
+                handler: function (response) {
+                    alert("Payment Successful");
+                    console.log(response);
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+
+        } catch (error) {
+            console.error("Error:", error);
         }
 
-        const order = await response.json();
-        console.log("Order received:", order);
+    };
 
-        // 2️⃣ Razorpay options
-        const options = {
-            key: "rzp_live_SLJCOBqfFovpLm",   // Your live key
-            amount: order.amount,
-            currency: order.currency,
-            order_id: order.id,
-            name: "Zenith Scholars",
-            description: "Course Payment",
-            handler: async function (response) {
-
-                const verifyResponse = await fetch("https://zenithscholars.onrender.com/verify-payment", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(response)
-                });
-
-                const result = await verifyResponse.json();
-
-                if (result.status === "success") {
-                    alert("Payment Successful!");
-                } else {
-                    alert("Payment verification failed");
-                }
-            },
-            theme: {
-                color: "#4e73df"
-            }
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
-
-    } catch (error) {
-        console.error("Payment error:", error);
-        alert("Something went wrong. Try again.");
-    }
-
-};
+});
 </script>
 </body>
 
