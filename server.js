@@ -8,9 +8,12 @@ const crypto = require("crypto");
 const app = express();
 const cors = require("cors");
 
+const cors = require("cors");
+
 app.use(cors({
   origin: "https://zerobugansh.github.io",
-  credentials: true
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
 }));
 
 app.options("*", cors());
