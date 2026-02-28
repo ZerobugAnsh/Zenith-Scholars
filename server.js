@@ -6,7 +6,11 @@ const cors = require("cors");
 const crypto = require("crypto");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "https://zerobugansh.github.io",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
 app.use(express.json());
 
 const razorpay = new Razorpay({
