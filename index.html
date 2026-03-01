@@ -134,7 +134,7 @@ async function login(){
 
     if(data.token){
       localStorage.setItem("token", data.token);
-      window.location.href = "dashboard.html";
+   window.location.href = "/ZenithScholars/dashboard.html";
     } else {
       errorDiv.innerText = "Invalid email or password";
     }
