@@ -202,7 +202,7 @@ document.getElementById("pay-btn").onclick = async function () {
     const order = await orderResponse.json();
 
     const options = {
-      key: "YOUR_RAZORPAY_PUBLIC_KEY",
+      key: "rzp_live_SLJCOBqfFovpLm",
       amount: order.amount,
       currency: order.currency,
       order_id: order.id,
