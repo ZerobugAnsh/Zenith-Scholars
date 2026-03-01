@@ -1,50 +1,126 @@
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zenith Scholars - Registration</title>
-<link rel="stylesheet" href="form.css">
+<title>Register</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: linear-gradient(135deg,#1f1c2c,#928dab);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.container {
+  background: rgba(255,255,255,0.1);
+  padding: 30px;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  width: 320px;
+  color: white;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #6a11cb;
+  color: white;
+  cursor: pointer;
+}
+
+.error {
+  color: #ff6b6b;
+  font-size: 14px;
+}
+</style>
 </head>
 <body>
-<section id="registration" style="padding:50px 20px; background:#f4f6f9;">
-    <h2 style="text-align:center; color:#1e3a8a; font-size:28px;">Student Registration Form</h2>
 
-    <div style="max-width:600px; margin:30px auto; background:white; padding:30px; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.1);">
-        
-        <form>
-            
-            <label>Student Full Name</label>
-            <input type="text" placeholder="Enter full name" required>
+<div class="container">
+<h2>Create Account</h2>
 
-            <label>Class</label>
-            <select required>
-                <option value="">Select Class</option>
-                <option>Class 7</option>
-                <option>Class 8</option>
-                <option>Class 9</option>
-                <option>Class 10</option>
-            </select>
+<input type="text" id="name" placeholder="Full Name">
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
+<input type="password" id="confirmPassword" placeholder="Confirm Password">
 
-            <label>School Name</label>
-            <input type="text" placeholder="Enter school name">
+<div id="error" class="error"></div>
 
-            <label>father's Name</label>
-            <input type="text" placeholder="Enter parent's name" required>
-            <label>Mother's Name</label>
-            <input type="text" placeholder="Enter parent's name" required>
+<button onclick="register()">Register</button>
 
-            <label>Mobile Number</label>
-            <input type="tel" placeholder="Enter mobile number" required>
+<p style="margin-top:15px;">
+Already have account?
+<a href="login.html" style="color:#fff;">Login</a>
+</p>
+</div>
 
-            <label>Email Address</label>
-            <input type="email" placeholder="Enter email address">
+<script>
+async function register() {
 
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
 
-            <button type="submit">Register Now</button>
+  const errorDiv = document.getElementById("error");
+  errorDiv.innerText = "";
 
-        </form>
-    </div>
-</section>
+  if (!name || !email || !password || !confirmPassword) {
+    errorDiv.innerText = "All fields are required";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    errorDiv.innerText = "Passwords do not match";
+    return;
+  }
+
+  if (password.length < 6) {
+    errorDiv.innerText = "Password must be at least 6 characters";
+    return;
+  }
+
+  try {
+
+    const res = await fetch("https://zenithscholars-u2fa.onrender.com/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorDiv.innerText = data.error || "Registration failed";
+      return;
+    }
+
+    alert("Registration successful! Please login.");
+    window.location.href = "login.html";
+
+  } catch (err) {
+    errorDiv.innerText = "Server error";
+  }
+}
+</script>
+
 </body>
-</html> 
-
+</html>

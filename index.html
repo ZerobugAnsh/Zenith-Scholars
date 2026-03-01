@@ -86,7 +86,24 @@ button:hover{
 transform:translateY(-2px);
 box-shadow:0 10px 30px rgba(168,85,247,0.5);
 }
+.register-link {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+}
 
+.register-link a {
+  color: #a18cd1;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.register-link a:hover {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255,255,255,0.6);
+}
 .error{
 margin-top:15px;
 text-align:center;
@@ -110,6 +127,12 @@ font-size:14px;
 </div>
 
 <button id="loginBtn">Login</button>
+
+
+<div class="register-link">
+  Don't have an account?
+  <a href="form.html">Create Account</a>
+</div>
 
 <div class="error" id="error"></div>
 
