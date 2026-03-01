@@ -189,57 +189,73 @@ function logout(){
   window.location.href="login.html";
 }
 </script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <script>
-document.getElementById("pay-btn").onclick = async function () {
+document.addEventListener("DOMContentLoaded", function() {
 
-  try {
+  const payBtn = document.getElementById("pay-btn");
 
-    const orderResponse = await fetch("https://zenithscholars-u2fa.onrender.com/create-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" }
-    });
-
-    const order = await orderResponse.json();
-
-    const options = {
-      key: "rzp_live_SLJCOBqfFovpLm",
-      amount: order.amount,
-      currency: order.currency,
-      order_id: order.id,
-      name: "Zenith Scholars",
-      description: "Premium Access",
-      theme: { color: "#7c3aed" },
-
-      handler: async function (response) {
-
-        const verifyResponse = await fetch("https://zenithscholars-u2fa.onrender.com/verify-payment", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": localStorage.getItem("token")
-          },
-          body: JSON.stringify(response)
-        });
-
-        const result = await verifyResponse.json();
-
-        if (result.status === "success") {
-          alert("Payment Successful! Refreshing...");
-          location.reload();
-        } else {
-          alert("Payment verification failed.");
-        }
-      }
-    };
-
-    const rzp = new Razorpay(options);
-    rzp.open();
-
-  } catch (err) {
-    alert("Payment error. Try again.");
+  if (!payBtn) {
+    console.log("Pay button not found");
+    return;
   }
 
-};
+  payBtn.addEventListener("click", async function () {
+
+    console.log("Pay button clicked");
+
+    try {
+
+      const orderResponse = await fetch("https://zenithscholars-u2fa.onrender.com/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      const order = await orderResponse.json();
+
+      const options = {
+        key: "YOUR_RAZORPAY_PUBLIC_KEY",
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.id,
+        name: "Zenith Scholars",
+        description: "Premium Access",
+        theme: { color: "#7c3aed" },
+
+        handler: async function (response) {
+
+          const verifyResponse = await fetch("https://zenithscholars-u2fa.onrender.com/verify-payment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": localStorage.getItem("token")
+            },
+            body: JSON.stringify(response)
+          });
+
+          const result = await verifyResponse.json();
+
+          if (result.status === "success") {
+            alert("Payment Successful!");
+            location.reload();
+          } else {
+            alert("Verification failed");
+          }
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
+
+    } catch (err) {
+      console.error(err);
+      alert("Payment error");
+    }
+
+  });
+
+});
 </script>
 
 </body>
