@@ -1,25 +1,150 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin Panel</title>
+<title>Admin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: white;
+}
+
+.container {
+  padding: 30px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cards {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.card {
+  flex: 1;
+  padding: 20px;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 18px;
+  opacity: 0.8;
+}
+
+.card p {
+  font-size: 28px;
+  margin: 10px 0 0;
+  font-weight: bold;
+}
+
+table {
+  width: 100%;
+  margin-top: 30px;
+  border-collapse: collapse;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  background: rgba(0,0,0,0.3);
+}
+
+tr:nth-child(even) {
+  background: rgba(255,255,255,0.05);
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.paid {
+  background: #2ecc71;
+}
+
+.free {
+  background: #e74c3c;
+}
+
+button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.logout {
+  background: #e74c3c;
+  color: white;
+}
+
+.refresh {
+  background: #3498db;
+  color: white;
+}
+</style>
 </head>
 <body>
 
-<h2>Admin Dashboard</h2>
+<div class="container">
 
-<p id="stats">Loading...</p>
+  <div class="header">
+    <h2>Admin Dashboard</h2>
+    <div>
+      <button class="refresh" onclick="loadAdmin()">Refresh</button>
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+  </div>
 
-<table border="1" cellpadding="10">
-<thead>
-<tr>
-<th>Name</th>
-<th>Email</th>
-<th>Role</th>
-<th>Paid</th>
-</tr>
-</thead>
-<tbody id="usersTable"></tbody>
-</table>
+  <div class="cards">
+    <div class="card">
+      <h3>Total Users</h3>
+      <p id="totalUsers">0</p>
+    </div>
+    <div class="card">
+      <h3>Paid Users</h3>
+      <p id="paidUsers">0</p>
+    </div>
+    <div class="card">
+      <h3>Free Users</h3>
+      <p id="freeUsers">0</p>
+    </div>
+  </div>
+
+  <canvas id="userChart" style="margin-top:30px;"></canvas>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="usersTable"></tbody>
+  </table>
+
+</div>
 
 <script>
 const token = localStorage.getItem("token");
@@ -28,36 +153,71 @@ if (!token) {
   window.location.href = "login.html";
 }
 
-fetch("https://zenithscholars-u2fa.onrender.com/admin", {
-  headers: { "Authorization": token }
-})
-.then(res => {
-  if (!res.ok) {
-    window.location.href = "dashboard.html";
-  }
-  return res.json();
-})
-.then(data => {
+const payload = JSON.parse(atob(token.split('.')[1]));
+if (payload.role !== "admin") {
+  window.location.href = "dashboard.html";
+}
 
-  document.getElementById("stats").innerText =
-    "Total Users: " + data.totalUsers +
-    " | Paid Users: " + data.paidUsers;
+let chart;
+
+async function loadAdmin() {
+  const res = await fetch("https://zenithscholars-u2fa.onrender.com/admin", {
+    headers: { "Authorization": token }
+  });
+
+  if (!res.ok) {
+    alert("Access denied");
+    return;
+  }
+
+  const data = await res.json();
+
+  document.getElementById("totalUsers").innerText = data.totalUsers;
+  document.getElementById("paidUsers").innerText = data.paidUsers;
+  document.getElementById("freeUsers").innerText =
+    data.totalUsers - data.paidUsers;
 
   const table = document.getElementById("usersTable");
+  table.innerHTML = "";
 
   data.students.forEach(user => {
-    const row = `
+    table.innerHTML += `
       <tr>
         <td>${user.name || "-"}</td>
         <td>${user.email}</td>
         <td>${user.role}</td>
-        <td>${user.isPaid ? "Yes" : "No"}</td>
+        <td>
+          <span class="badge ${user.isPaid ? "paid" : "free"}">
+            ${user.isPaid ? "Paid" : "Free"}
+          </span>
+        </td>
       </tr>
     `;
-    table.innerHTML += row;
   });
 
-});
+  // Chart
+  const ctx = document.getElementById("userChart").getContext("2d");
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Paid Users", "Free Users"],
+      datasets: [{
+        data: [data.paidUsers, data.totalUsers - data.paidUsers],
+        backgroundColor: ["#2ecc71", "#e74c3c"]
+      }]
+    }
+  });
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  window.location.href = "login.html";
+}
+
+loadAdmin();
 </script>
 
 </body>
