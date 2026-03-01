@@ -133,6 +133,10 @@ button {
       <h3>Free Users</h3>
       <p id="freeUsers">0</p>
     </div>
+    <div class="card">
+  <h3>Total Revenue</h3>
+  <p id="totalRevenue">₹0</p>
+</div>
   </div>
 
 <div class="chart-container">
@@ -183,6 +187,8 @@ async function loadAdmin() {
   document.getElementById("paidUsers").innerText = data.paidUsers;
   document.getElementById("freeUsers").innerText =
     data.totalUsers - data.paidUsers;
+    document.getElementById("totalRevenue").innerText =
+  "₹" + data.totalRevenue;
 
   const table = document.getElementById("usersTable");
   table.innerHTML = "";

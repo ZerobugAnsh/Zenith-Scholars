@@ -30,10 +30,17 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   password: String,
   role: { type: String, default: "student" },
-  isPaid: { type: Boolean, default: false }
-});
+  isPaid: { type: Boolean, default: false },
 
-const User = mongoose.model("User", userSchema);
+  payments: [
+    {
+      orderId: String,
+      paymentId: String,
+      amount: Number,
+      paidAt: { type: Date, default: Date.now }
+    }
+  ]
+});
 
 /* ----------------- AUTH ROUTES ----------------- */
 app.post("/register", async (req, res) => {
@@ -112,6 +119,21 @@ app.get("/admin", async (req, res) => {
       paidUsers: users.filter(u => u.isPaid).length,
       students: users
     });
+    let totalRevenue = 0;
+
+users.forEach(user => {
+  if (user.payments) {
+    user.payments.forEach(p => {
+      totalRevenue += p.amount;
+    });
+  }
+});
+res.json({
+  totalUsers: users.length,
+  paidUsers: users.filter(u => u.isPaid).length,
+  totalRevenue,
+  students: users
+});
 
   } catch (err) {
     res.status(401).json({ error: "Invalid token" });
@@ -193,9 +215,17 @@ app.post("/verify-payment", async (req, res) => {
 
     if (expectedSignature === razorpay_signature) {
 
-      await User.findByIdAndUpdate(verifiedUser.id, {
-        isPaid: true
-      });
+     await User.findByIdAndUpdate(verifiedUser.id, {
+  isPaid: true,
+  $push: {
+    payments: {
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      amount: 100,
+      paidAt: new Date()
+    }
+  }
+});
 
       return res.json({ status: "success" });
 
