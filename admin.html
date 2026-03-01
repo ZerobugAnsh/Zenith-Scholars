@@ -161,7 +161,7 @@ button {
 const token = localStorage.getItem("token");
 
 if (!token) {
-  window.location.href = "login.html";
+  window.location.href = "index.html";
 }
 
 const payload = JSON.parse(atob(token.split('.')[1]));
@@ -233,7 +233,7 @@ async function loadAdmin() {
 
 function logout() {
   localStorage.removeItem("token");
-  window.location.href = "login.html";
+  window.location.href = "index.html";
 }
 
 loadAdmin();

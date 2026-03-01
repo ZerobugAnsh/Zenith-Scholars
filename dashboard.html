@@ -153,7 +153,7 @@ color:#cbd5e1;
 const token = localStorage.getItem("token");
 
 if(!token){
-  window.location.href="login.html";
+  window.location.href="index.html";
 }
 
 fetch("https://zenithscholars-u2fa.onrender.com/dashboard",{
@@ -182,12 +182,12 @@ fetch("https://zenithscholars-u2fa.onrender.com/dashboard",{
   }
 })
 .catch(()=>{
-  window.location.href="login.html";
+  window.location.href="index.html";
 });
 
 function logout(){
   localStorage.removeItem("token");
-  window.location.href="login.html";
+  window.location.href="index.html";
 }
 </script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
