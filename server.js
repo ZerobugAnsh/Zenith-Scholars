@@ -174,6 +174,41 @@ app.get("/dashboard", async (req, res) => {
     res.status(401).json({ error: "Invalid token" });
   }
 });
+/* ================= ADMIN ================= */
+app.get("/admin", async (req, res) => {
+  try {
+    const token = req.headers.authorization;
+    if (!token)
+      return res.status(401).json({ error: "No token provided" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (decoded.role !== "admin")
+      return res.status(403).json({ error: "Access denied" });
+
+    const users = await User.find().select("-password");
+
+    let totalRevenue = 0;
+    users.forEach(user => {
+      if (user.payments && user.payments.length > 0) {
+        user.payments.forEach(p => {
+          totalRevenue += p.amount;
+        });
+      }
+    });
+
+    res.json({
+      totalUsers: users.length,
+      paidUsers: users.filter(u => u.isPaid).length,
+      totalRevenue,
+      students: users
+    });
+
+  } catch (err) {
+    console.log("ADMIN ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 /* ================= RAZORPAY ================= */
 const razorpay = new Razorpay({
