@@ -1,6 +1,4 @@
 require("dotenv").config();
-const nodemailer = require("nodemailer");
-
 const express = require("express");
 const mongoose = require("mongoose");
 const Razorpay = require("razorpay");
@@ -8,13 +6,9 @@ const cors = require("cors");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 
 const app = express();
-
-/* ================= MONGODB ================= */
-mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB Connected"))
-.catch(err => console.log("MongoDB Error:", err));
 
 /* ================= MIDDLEWARE ================= */
 app.use(cors({
@@ -23,6 +17,14 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+app.use(express.json());
+
+/* ================= MONGODB ================= */
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.log("❌ MongoDB Error:", err));
+
+/* ================= EMAIL CONFIG ================= */
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
@@ -32,6 +34,11 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 /* ================= USER MODEL ================= */
 const userSchema = new mongoose.Schema({
   name: String,
@@ -40,8 +47,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, default: "student" },
   isPaid: { type: Boolean, default: false },
   isVerified: { type: Boolean, default: false },
-otp: String,
-otpExpires: Date,
+  otp: String,
+  otpExpires: Date,
   payments: [
     {
       orderId: String,
@@ -54,17 +61,22 @@ otpExpires: Date,
 
 const User = mongoose.model("User", userSchema);
 
-/* ================= AUTH ROUTES ================= */
+/* ================= REGISTER ================= */
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
-    if (existingUser)
+    if (existingUser && existingUser.isVerified) {
       return res.status(400).json({ error: "User already exists" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
+
+    if (existingUser && !existingUser.isVerified) {
+      await User.deleteOne({ email });
+    }
 
     await User.create({
       name,
@@ -74,46 +86,59 @@ app.post("/register", async (req, res) => {
       otpExpires: Date.now() + 5 * 60 * 1000
     });
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Zenith Scholars - Email Verification OTP",
-      html: `
-        <h2>Email Verification</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP is valid for 5 minutes.</p>
-      `
-    });
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS length:", process.env.EMAIL_PASS?.length);
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Zenith Scholars - Email Verification OTP",
+        html: `
+          <h2>Email Verification</h2>
+          <p>Your OTP is:</p>
+          <h1>${otp}</h1>
+          <p>This OTP is valid for 5 minutes.</p>
+        `
+      });
+      console.log("✅ Email sent successfully");
+    } catch (mailError) {
+      console.log("❌ MAIL ERROR:", mailError);
+      return res.status(500).json({ error: "Email sending failed" });
+    }
+
     res.json({ message: "OTP sent to email" });
 
   } catch (err) {
+    console.log("❌ REGISTER ERROR:", err);
     res.status(500).json({ error: "Registration failed" });
   }
 });
+
+/* ================= VERIFY OTP ================= */
 app.post("/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
+  try {
+    const { email, otp } = req.body;
 
-  const user = await User.findOne({ email });
-  if (!user) return res.status(400).json({ error: "User not found" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ error: "User not found" });
 
-  if (user.otp !== otp)
-    return res.status(400).json({ error: "Invalid OTP" });
+    if (user.otp !== otp)
+      return res.status(400).json({ error: "Invalid OTP" });
 
-  if (user.otpExpires < Date.now())
-    return res.status(400).json({ error: "OTP expired" });
+    if (user.otpExpires < Date.now())
+      return res.status(400).json({ error: "OTP expired" });
 
-  user.isVerified = true;
-  user.otp = null;
-  user.otpExpires = null;
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
 
-  await user.save();
+    res.json({ message: "Email verified successfully" });
 
-  res.json({ message: "Email verified successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "OTP verification failed" });
+  }
 });
 
+/* ================= LOGIN ================= */
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -122,9 +147,11 @@ app.post("/login", async (req, res) => {
     if (!user) return res.status(400).json({ error: "Invalid email" });
 
     const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(400).json({ error: "Invalid password" });
+    if (!validPassword)
+      return res.status(400).json({ error: "Invalid password" });
+
     if (!user.isVerified)
-  return res.status(403).json({ error: "Email not verified" });
+      return res.status(403).json({ error: "Email not verified" });
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -135,7 +162,7 @@ app.post("/login", async (req, res) => {
     res.json({ token });
 
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Login failed" });
   }
 });
 
@@ -148,40 +175,33 @@ app.get("/dashboard", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
 
-    if (!user) return res.status(404).json({ error: "User not found" });
-
     res.json({
       email: user.email,
       isPaid: user.isPaid
     });
 
-  } catch (err) {
+  } catch {
     res.status(401).json({ error: "Invalid token" });
   }
 });
 
-/* ================= ADMIN DASHBOARD ================= */
+/* ================= ADMIN ================= */
 app.get("/admin", async (req, res) => {
   try {
     const token = req.headers.authorization;
     if (!token) return res.status(401).json({ error: "No token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (decoded.role !== "admin") {
+    if (decoded.role !== "admin")
       return res.status(403).json({ error: "Access denied" });
-    }
 
     const users = await User.find().select("-password");
 
     let totalRevenue = 0;
-
     users.forEach(user => {
-      if (user.payments && user.payments.length > 0) {
-        user.payments.forEach(p => {
-          totalRevenue += p.amount;
-        });
-      }
+      user.payments.forEach(p => {
+        totalRevenue += p.amount;
+      });
     });
 
     res.json({
@@ -191,46 +211,8 @@ app.get("/admin", async (req, res) => {
       students: users
     });
 
-  } catch (err) {
+  } catch {
     res.status(401).json({ error: "Invalid token" });
-  }
-});
-
-/* ================= ADMIN ACTIONS ================= */
-app.post("/admin/action", async (req, res) => {
-  try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).json({ error: "No token" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (decoded.role !== "admin") {
-      return res.status(403).json({ error: "Access denied" });
-    }
-
-    const { userId, action } = req.body;
-
-    if (action === "delete") {
-      await User.findByIdAndDelete(userId);
-      return res.json({ message: "User deleted" });
-    }
-
-    if (action === "togglePaid") {
-      const user = await User.findById(userId);
-      user.isPaid = !user.isPaid;
-      await user.save();
-      return res.json({ message: "Payment status updated" });
-    }
-
-    if (action === "makeAdmin") {
-      await User.findByIdAndUpdate(userId, { role: "admin" });
-      return res.json({ message: "User promoted to admin" });
-    }
-
-    res.status(400).json({ error: "Invalid action" });
-
-  } catch (err) {
-    res.status(500).json({ error: "Action failed" });
   }
 });
 
@@ -247,10 +229,8 @@ app.post("/create-order", async (req, res) => {
       currency: "INR",
       receipt: "receipt_" + Date.now()
     });
-
     res.json(order);
-
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Order creation failed" });
   }
 });
@@ -260,8 +240,6 @@ app.post("/verify-payment", async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     const token = req.headers.authorization;
-    if (!token) return res.status(401).json({ error: "No token" });
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const body = razorpay_order_id + "|" + razorpay_payment_id;
@@ -271,9 +249,8 @@ app.post("/verify-payment", async (req, res) => {
       .update(body)
       .digest("hex");
 
-    if (expectedSignature !== razorpay_signature) {
+    if (expectedSignature !== razorpay_signature)
       return res.status(400).json({ status: "failure" });
-    }
 
     await User.findByIdAndUpdate(decoded.id, {
       isPaid: true,
@@ -289,7 +266,7 @@ app.post("/verify-payment", async (req, res) => {
 
     res.json({ status: "success" });
 
-  } catch (err) {
+  } catch {
     res.status(400).json({ error: "Payment verification failed" });
   }
 });
@@ -298,5 +275,5 @@ app.post("/verify-payment", async (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
