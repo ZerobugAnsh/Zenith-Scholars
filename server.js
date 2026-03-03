@@ -83,7 +83,7 @@ app.post("/register", async (req, res) => {
   try {
   await resend.emails.send({
     from: "onboarding@resend.dev", // default allowed sender
-    to: email,
+    to: "rajeevansh00@gmail.com",
     subject: "Zenith Scholars - Email Verification OTP",
     html: `
       <h2>Email Verification</h2>
