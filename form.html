@@ -109,12 +109,12 @@ async function register() {
     const data = await res.json();
 
     if (!res.ok) {
-      errorDiv.innerText = data.error || "Registration failed";
-      return;
-    }
+  errorDiv.innerText = data.error || "Registration failed";
+  return;
+}
 
-    alert("Registration successful! Please login.");
-    window.location.href = "otp.html";
+alert("OTP sent to your email. Please verify.");
+window.location.href = "otp.html";
 
   } catch (err) {
     errorDiv.innerText = "Server error";
