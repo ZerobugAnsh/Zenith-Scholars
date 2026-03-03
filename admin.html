@@ -142,6 +142,14 @@ button {
 <div class="chart-container">
   <canvas id="userChart"></canvas>
 </div>
+<div class="card">
+  <h3>Create Live Class</h3>
+  <input id="classTitle" placeholder="Title">
+  <input id="classDesc" placeholder="Description">
+  <input id="classDate" type="datetime-local">
+  <input id="classLink" placeholder="Google Meet / Zoom Link">
+  <button onclick="createClass()">Create</button>
+</div>
 
   <table>
     <thead>
@@ -276,6 +284,23 @@ async function makeAdmin(userId) {
   });
 
   loadAdmin();
+}
+async function createClass() {
+  await fetch("https://zenithscholars-u2fa.onrender.com/admin/create-class", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": localStorage.getItem("token")
+    },
+    body: JSON.stringify({
+      title: document.getElementById("classTitle").value,
+      description: document.getElementById("classDesc").value,
+      date: document.getElementById("classDate").value,
+      meetLink: document.getElementById("classLink").value
+    })
+  });
+
+  alert("Class Created");
 }
 </script>
 

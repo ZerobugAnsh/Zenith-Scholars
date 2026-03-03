@@ -257,6 +257,30 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
 });
+async function loadClasses() {
+  const res = await fetch("https://zenithscholars-u2fa.onrender.com/classes", {
+    headers: { "Authorization": localStorage.getItem("token") }
+  });
+
+  const classes = await res.json();
+
+  const container = document.createElement("div");
+  container.className = "card";
+  container.innerHTML = "<h3>Live Classes</h3>";
+
+  classes.forEach(cls => {
+    container.innerHTML += `
+      <p><strong>${cls.title}</strong><br>
+      ${new Date(cls.date).toLocaleString()}<br>
+      <a href="${cls.meetLink}" target="_blank" style="color:#c084fc;">Join Class</a>
+      </p>
+    `;
+  });
+
+  document.querySelector(".container").appendChild(container);
+}
+
+loadClasses();
 </script>
 
 </body>

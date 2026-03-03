@@ -74,6 +74,17 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model("User", userSchema);
+/* ================= LIVE CLASS MODEL ================= */
+
+const liveClassSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  date: Date,
+  meetLink: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const LiveClass = mongoose.model("LiveClass", liveClassSchema);
 
 /* ================= REGISTER ================= */
 
@@ -170,6 +181,23 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ error: "Login failed" });
   }
 });
+/* ================= GET LIVE CLASSES ================= */
+
+app.get("/classes", async (req, res) => {
+  try {
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: "No token" });
+
+    jwt.verify(token, process.env.JWT_SECRET);
+
+    const classes = await LiveClass.find().sort({ date: 1 });
+
+    res.json(classes);
+
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+  }
+});
 
 /* ================= DASHBOARD ================= */
 
@@ -251,6 +279,31 @@ app.post("/admin/action", async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: "Admin action failed" });
+  }
+});
+/* ================= CREATE LIVE CLASS ================= */
+
+app.post("/admin/create-class", async (req, res) => {
+  try {
+    const token = extractToken(req);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (decoded.role !== "admin")
+      return res.status(403).json({ error: "Access denied" });
+
+    const { title, description, date, meetLink } = req.body;
+
+    await LiveClass.create({
+      title,
+      description,
+      date,
+      meetLink
+    });
+
+    res.json({ message: "Live class created" });
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create class" });
   }
 });
 
