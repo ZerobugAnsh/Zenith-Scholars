@@ -23,18 +23,15 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.use(express.json());
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
 });
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
 /* ================= USER MODEL ================= */
 const userSchema = new mongoose.Schema({
   name: String,
@@ -88,7 +85,8 @@ app.post("/register", async (req, res) => {
         <p>This OTP is valid for 5 minutes.</p>
       `
     });
-
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS length:", process.env.EMAIL_PASS?.length);
     res.json({ message: "OTP sent to email" });
 
   } catch (err) {
