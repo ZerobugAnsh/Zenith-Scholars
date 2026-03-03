@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const Razorpay = require("razorpay");
@@ -9,15 +10,10 @@ const jwt = require("jsonwebtoken");
 const formData = require("form-data");
 const Mailgun = require("mailgun.js");
 
-const mailgun = new Mailgun(formData);
-const mg = mailgun.client({
-  username: "api",
-  key: process.env.MAILGUN_API_KEY
-});
-
 const app = express();
 
-/* ================= MIDDLEWARE ================= */
+/* ================= CONFIG ================= */
+
 app.use(cors({
   origin: "https://zerobugansh.github.io",
   methods: ["GET", "POST"],
@@ -27,15 +23,37 @@ app.use(cors({
 app.use(express.json());
 
 /* ================= MONGODB ================= */
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Error:", err));
+
+/* ================= MAILGUN ================= */
+
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+  username: "api",
+  key: process.env.MAILGUN_API_KEY
+});
+
+/* ================= UTILITIES ================= */
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function extractToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return null;
+
+  if (authHeader.startsWith("Bearer "))
+    return authHeader.split(" ")[1];
+
+  return authHeader;
+}
+
 /* ================= USER MODEL ================= */
+
 const userSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
@@ -58,11 +76,13 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 /* ================= REGISTER ================= */
+
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
+
     if (existingUser && existingUser.isVerified)
       return res.status(400).json({ error: "User already exists" });
 
@@ -84,25 +104,19 @@ app.post("/register", async (req, res) => {
       from: `Zenith Scholars <mailgun@${process.env.MAILGUN_DOMAIN}>`,
       to: [email],
       subject: "Zenith Scholars - Email Verification OTP",
-      html: `
-        <h2>Email Verification</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP is valid for 5 minutes.</p>
-      `
+      html: `<h2>Your OTP is:</h2><h1>${otp}</h1><p>Valid for 5 minutes.</p>`
     });
 
-    console.log("✅ Email sent via Mailgun");
-
-    res.json({ message: "OTP sent to email" });
+    res.json({ message: "OTP sent" });
 
   } catch (err) {
-    console.log("❌ REGISTER ERROR:", err);
+    console.log("REGISTER ERROR:", err);
     res.status(500).json({ error: "Registration failed" });
   }
 });
 
 /* ================= VERIFY OTP ================= */
+
 app.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -121,7 +135,7 @@ app.post("/verify-otp", async (req, res) => {
     user.otpExpires = null;
     await user.save();
 
-    res.json({ message: "Email verified successfully" });
+    res.json({ message: "Email verified" });
 
   } catch (err) {
     res.status(500).json({ error: "OTP verification failed" });
@@ -129,6 +143,7 @@ app.post("/verify-otp", async (req, res) => {
 });
 
 /* ================= LOGIN ================= */
+
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -157,9 +172,10 @@ app.post("/login", async (req, res) => {
 });
 
 /* ================= DASHBOARD ================= */
+
 app.get("/dashboard", async (req, res) => {
   try {
-    const token = req.headers.authorization;
+    const token = extractToken(req);
     if (!token) return res.status(401).json({ error: "No token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -174,15 +190,15 @@ app.get("/dashboard", async (req, res) => {
     res.status(401).json({ error: "Invalid token" });
   }
 });
+
 /* ================= ADMIN ================= */
+
 app.get("/admin", async (req, res) => {
   try {
-    const token = req.headers.authorization;
-    if (!token)
-      return res.status(401).json({ error: "No token provided" });
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: "No token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     if (decoded.role !== "admin")
       return res.status(403).json({ error: "Access denied" });
 
@@ -190,11 +206,7 @@ app.get("/admin", async (req, res) => {
 
     let totalRevenue = 0;
     users.forEach(user => {
-      if (user.payments && user.payments.length > 0) {
-        user.payments.forEach(p => {
-          totalRevenue += p.amount;
-        });
-      }
+      user.payments.forEach(p => totalRevenue += p.amount);
     });
 
     res.json({
@@ -209,46 +221,41 @@ app.get("/admin", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-/* ================= ADMIN ACTIONS ================= */
+
+/* ================= ADMIN ACTION ================= */
+
 app.post("/admin/action", async (req, res) => {
   try {
-    const token = req.headers.authorization;
-    if (!token)
-      return res.status(401).json({ error: "No token provided" });
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: "No token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     if (decoded.role !== "admin")
       return res.status(403).json({ error: "Access denied" });
 
     const { userId, action } = req.body;
 
-    if (action === "delete") {
+    if (action === "delete")
       await User.findByIdAndDelete(userId);
-      return res.json({ message: "User deleted" });
-    }
 
     if (action === "togglePaid") {
       const user = await User.findById(userId);
       user.isPaid = !user.isPaid;
       await user.save();
-      return res.json({ message: "Payment status updated" });
     }
 
-    if (action === "makeAdmin") {
+    if (action === "makeAdmin")
       await User.findByIdAndUpdate(userId, { role: "admin" });
-      return res.json({ message: "User promoted to admin" });
-    }
 
-    res.status(400).json({ error: "Invalid action" });
+    res.json({ message: "Action completed" });
 
   } catch (err) {
-    console.log("ADMIN ACTION ERROR:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Admin action failed" });
   }
 });
 
 /* ================= RAZORPAY ================= */
+
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET
@@ -267,9 +274,44 @@ app.post("/create-order", async (req, res) => {
   }
 });
 
-/* ================= SERVER ================= */
-const PORT = process.env.PORT || 5000;
+app.post("/verify-payment", async (req, res) => {
+  try {
+    const token = extractToken(req);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature)
+      return res.status(400).json({ status: "failure" });
+
+    await User.findByIdAndUpdate(decoded.id, {
+      isPaid: true,
+      $push: {
+        payments: {
+          orderId: razorpay_order_id,
+          paymentId: razorpay_payment_id,
+          amount: 100,
+          paidAt: new Date()
+        }
+      }
+    });
+
+    res.json({ status: "success" });
+
+  } catch {
+    res.status(400).json({ error: "Payment verification failed" });
+  }
+});
+
+/* ================= SERVER ================= */
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
