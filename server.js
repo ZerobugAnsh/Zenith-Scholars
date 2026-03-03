@@ -6,18 +6,14 @@ const cors = require("cors");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { Resend } = require("resend");
-const resend = new Resend(process.env.RESEND_API_KEY);
 const formData = require("form-data");
 const Mailgun = require("mailgun.js");
 
 const mailgun = new Mailgun(formData);
-
 const mg = mailgun.client({
   username: "api",
   key: process.env.MAILGUN_API_KEY
 });
-
 
 const app = express();
 
@@ -34,9 +30,6 @@ app.use(express.json());
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Error:", err));
-
-/* ================= EMAIL CONFIG ================= */
-
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -70,16 +63,14 @@ app.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
-    if (existingUser && existingUser.isVerified) {
+    if (existingUser && existingUser.isVerified)
       return res.status(400).json({ error: "User already exists" });
-    }
+
+    if (existingUser && !existingUser.isVerified)
+      await User.deleteOne({ email });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
-
-    if (existingUser && !existingUser.isVerified) {
-      await User.deleteOne({ email });
-    }
 
     await User.create({
       name,
@@ -89,26 +80,28 @@ app.post("/register", async (req, res) => {
       otpExpires: Date.now() + 5 * 60 * 1000
     });
 
-  try {
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+      from: `Zenith Scholars <mailgun@${process.env.MAILGUN_DOMAIN}>`,
+      to: [email],
+      subject: "Zenith Scholars - Email Verification OTP",
+      html: `
+        <h2>Email Verification</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for 5 minutes.</p>
+      `
+    });
 
-  await mg.messages.create(process.env.MAILGUN_DOMAIN, {
-    from: `Zenith Scholars <mailgun@${process.env.MAILGUN_DOMAIN}>`,
-    to: [email],
-    subject: "Zenith Scholars - Email Verification OTP",
-    html: `
-      <h2>Email Verification</h2>
-      <p>Your OTP is:</p>
-      <h1>${otp}</h1>
-      <p>This OTP is valid for 5 minutes.</p>
-    `
-  });
+    console.log("✅ Email sent via Mailgun");
 
-  console.log("✅ Email sent via Mailgun");
+    res.json({ message: "OTP sent to email" });
 
-} catch (mailError) {
-  console.log("❌ MAILGUN ERROR:", mailError);
-  return res.status(500).json({ error: "Email sending failed" });
-}
+  } catch (err) {
+    console.log("❌ REGISTER ERROR:", err);
+    res.status(500).json({ error: "Registration failed" });
+  }
+});
+
 /* ================= VERIFY OTP ================= */
 app.post("/verify-otp", async (req, res) => {
   try {
@@ -182,37 +175,6 @@ app.get("/dashboard", async (req, res) => {
   }
 });
 
-/* ================= ADMIN ================= */
-app.get("/admin", async (req, res) => {
-  try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).json({ error: "No token" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== "admin")
-      return res.status(403).json({ error: "Access denied" });
-
-    const users = await User.find().select("-password");
-
-    let totalRevenue = 0;
-    users.forEach(user => {
-      user.payments.forEach(p => {
-        totalRevenue += p.amount;
-      });
-    });
-
-    res.json({
-      totalUsers: users.length,
-      paidUsers: users.filter(u => u.isPaid).length,
-      totalRevenue,
-      students: users
-    });
-
-  } catch {
-    res.status(401).json({ error: "Invalid token" });
-  }
-});
-
 /* ================= RAZORPAY ================= */
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -229,42 +191,6 @@ app.post("/create-order", async (req, res) => {
     res.json(order);
   } catch {
     res.status(500).json({ error: "Order creation failed" });
-  }
-});
-
-app.post("/verify-payment", async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-    const token = req.headers.authorization;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body)
-      .digest("hex");
-
-    if (expectedSignature !== razorpay_signature)
-      return res.status(400).json({ status: "failure" });
-
-    await User.findByIdAndUpdate(decoded.id, {
-      isPaid: true,
-      $push: {
-        payments: {
-          orderId: razorpay_order_id,
-          paymentId: razorpay_payment_id,
-          amount: 100,
-          paidAt: new Date()
-        }
-      }
-    });
-
-    res.json({ status: "success" });
-
-  } catch {
-    res.status(400).json({ error: "Payment verification failed" });
   }
 });
 
