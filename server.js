@@ -1,4 +1,5 @@
 require("dotenv").config();
+const nodemailer = require("nodemailer");
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -23,6 +24,16 @@ app.use(cors({
 }));
 
 app.use(express.json());
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 /* ================= USER MODEL ================= */
 const userSchema = new mongoose.Schema({
@@ -31,6 +42,9 @@ const userSchema = new mongoose.Schema({
   password: String,
   role: { type: String, default: "student" },
   isPaid: { type: Boolean, default: false },
+  isVerified: { type: Boolean, default: false },
+otp: String,
+otpExpires: Date,
   payments: [
     {
       orderId: String,
@@ -48,21 +62,58 @@ app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ error: "User already exists" });
 
-    const newUser = new User({
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = generateOTP();
+
+    await User.create({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      otp,
+      otpExpires: Date.now() + 5 * 60 * 1000
     });
 
-    await newUser.save();
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Zenith Scholars - Email Verification OTP",
+      html: `
+        <h2>Email Verification</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for 5 minutes.</p>
+      `
+    });
 
-    res.json({ message: "User registered successfully" });
+    res.json({ message: "OTP sent to email" });
 
   } catch (err) {
-    res.status(400).json({ error: "User already exists" });
+    res.status(500).json({ error: "Registration failed" });
   }
+});
+app.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) return res.status(400).json({ error: "User not found" });
+
+  if (user.otp !== otp)
+    return res.status(400).json({ error: "Invalid OTP" });
+
+  if (user.otpExpires < Date.now())
+    return res.status(400).json({ error: "OTP expired" });
+
+  user.isVerified = true;
+  user.otp = null;
+  user.otpExpires = null;
+
+  await user.save();
+
+  res.json({ message: "Email verified successfully" });
 });
 
 app.post("/login", async (req, res) => {
@@ -74,6 +125,8 @@ app.post("/login", async (req, res) => {
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(400).json({ error: "Invalid password" });
+    if (!user.isVerified)
+  return res.status(403).json({ error: "Email not verified" });
 
     const token = jwt.sign(
       { id: user._id, role: user.role },

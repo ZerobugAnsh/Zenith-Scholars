@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Email Verification</title>
+<style>
+body{
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+background:linear-gradient(135deg,#0f172a,#312e81);
+color:white;
+font-family:sans-serif;
+}
+.box{
+background:rgba(255,255,255,0.1);
+padding:30px;
+border-radius:15px;
+text-align:center;
+}
+input{
+padding:10px;
+margin:10px 0;
+border-radius:8px;
+border:none;
+}
+button{
+padding:10px 20px;
+border:none;
+border-radius:8px;
+background:#7c3aed;
+color:white;
+cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="box">
+<h2>Enter OTP</h2>
+<input type="email" id="email" placeholder="Enter Email"><br>
+<input type="text" id="otp" placeholder="Enter OTP"><br>
+<button onclick="verifyOTP()">Verify</button>
+<p id="msg"></p>
+</div>
+
+<script>
+async function verifyOTP(){
+  const email=document.getElementById("email").value;
+  const otp=document.getElementById("otp").value;
+
+  const res=await fetch("https://zenithscholars-u2fa.onrender.com/verify-otp",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ email, otp })
+  });
+
+  const data=await res.json();
+
+  if(res.ok){
+    alert("Verified! Please login.");
+    window.location.href="index.html";
+  } else {
+    document.getElementById("msg").innerText=data.error;
+  }
+}
+</script>
+
+</body>
+</html>
