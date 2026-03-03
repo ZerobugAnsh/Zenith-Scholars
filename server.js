@@ -8,6 +8,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
+const formData = require("form-data");
+const Mailgun = require("mailgun.js");
+
+const mailgun = new Mailgun(formData);
+
+const mg = mailgun.client({
+  username: "api",
+  key: process.env.MAILGUN_API_KEY
+});
 
 
 const app = express();
@@ -81,9 +90,10 @@ app.post("/register", async (req, res) => {
     });
 
   try {
-  await resend.emails.send({
-    from: "onboarding@resend.dev", // default allowed sender
-    to: "rajeevansh00@gmail.com",
+
+  await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+    from: `Zenith Scholars <mailgun@${process.env.MAILGUN_DOMAIN}>`,
+    to: [email],
     subject: "Zenith Scholars - Email Verification OTP",
     html: `
       <h2>Email Verification</h2>
@@ -93,20 +103,12 @@ app.post("/register", async (req, res) => {
     `
   });
 
-  console.log("✅ Email sent via Resend");
+  console.log("✅ Email sent via Mailgun");
 
 } catch (mailError) {
-  console.log("❌ RESEND ERROR:", mailError);
+  console.log("❌ MAILGUN ERROR:", mailError);
   return res.status(500).json({ error: "Email sending failed" });
 }
-    res.json({ message: "OTP sent to email" });
-
-  } catch (err) {
-    console.log("❌ REGISTER ERROR:", err);
-    res.status(500).json({ error: "Registration failed" });
-  }
-});
-
 /* ================= VERIFY OTP ================= */
 app.post("/verify-otp", async (req, res) => {
   try {
