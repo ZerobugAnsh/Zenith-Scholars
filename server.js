@@ -199,7 +199,7 @@ app.get("/classes", async (req, res) => {
       _id: cls._id,
       title: cls.title,
       description: cls.description,
-      date: cls.date,
+      date: new Date(req.body.date + "Z"),
       createdAt: cls.createdAt,
 
       // 🔐 Hide meet link from unpaid users
