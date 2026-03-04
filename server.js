@@ -366,6 +366,38 @@ app.get("/announcements", async (req, res) => {
     res.status(500).json({ error: "Failed to load announcements" });
   }
 });
+app.post("/admin/delete-announcement", async (req, res) => {
+  try {
+
+    const token = extractToken(req);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (decoded.role !== "admin")
+      return res.status(403).json({ error: "Admin only" });
+
+    const { id } = req.body;
+
+    await Announcement.findByIdAndDelete(id);
+
+    res.json({ message: "Announcement deleted" });
+
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
+app.get("/admin/announcements", async (req, res) => {
+
+  const token = extractToken(req);
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+  if (decoded.role !== "admin")
+    return res.status(403).json({ error: "Admin only" });
+
+  const announcements = await Announcement.find().sort({ createdAt: -1 });
+
+  res.json(announcements);
+
+});
 
 /* ================= RAZORPAY ================= */
 
