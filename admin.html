@@ -151,9 +151,14 @@ button {
   <button onclick="createClass()">Create</button>
 </div>
 <div class="card">
-  <h3>Create Announcement</h3>
-  <input id="announcementText" placeholder="Write announcement">
-  <button onclick="createAnnouncement()">Publish</button>
+<h3>Create Announcement</h3>
+
+<input id="announcementText" placeholder="Write announcement">
+
+<input type="datetime-local" id="announcementTime">
+
+<button onclick="createAnnouncement()">Publish</button>
+
 </div>
 <div class="card">
 <h3>Manage Announcements</h3>
@@ -319,11 +324,10 @@ async function createClass() {
 
   alert("Class Created");
 }
-async function createAnnouncement() {
+async function createAnnouncement(){
 
   const message = document.getElementById("announcementText").value;
-
-  if(!message) return alert("Write announcement");
+  const publishAt = document.getElementById("announcementTime").value;
 
   await fetch("https://zenithscholars-u2fa.onrender.com/admin/create-announcement",{
     method:"POST",
@@ -331,11 +335,12 @@ async function createAnnouncement() {
       "Content-Type":"application/json",
       "Authorization":localStorage.getItem("token")
     },
-    body:JSON.stringify({message})
+    body: JSON.stringify({ message, publishAt })
   });
 
-  alert("Announcement posted");
+  alert("Announcement scheduled");
 
+  loadAnnouncementsAdmin();
 }
 async function loadAnnouncementsAdmin(){
 

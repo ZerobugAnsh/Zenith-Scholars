@@ -87,6 +87,7 @@ const liveClassSchema = new mongoose.Schema({
 const LiveClass = mongoose.model("LiveClass", liveClassSchema);
 const announcementSchema = new mongoose.Schema({
   message: String,
+  publishAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -341,31 +342,20 @@ app.post("/admin/create-announcement", async (req, res) => {
     if (decoded.role !== "admin")
       return res.status(403).json({ error: "Admin only" });
 
-    const { message } = req.body;
+    const { message, publishAt } = req.body;
 
-    const announcement = await Announcement.create({ message });
+    const announcement = await Announcement.create({
+      message,
+      publishAt: publishAt ? new Date(publishAt) : new Date()
+    });
 
-    res.json({ message: "Announcement created", announcement });
+    res.json({ message: "Announcement scheduled", announcement });
 
   } catch (err) {
-    console.log("ANNOUNCEMENT ERROR:", err);
     res.status(500).json({ error: "Failed to create announcement" });
   }
 });
-app.get("/announcements", async (req, res) => {
-  try {
 
-    const announcements = await Announcement
-      .find()
-      .sort({ createdAt: -1 })
-      .limit(6);
-
-    res.json(announcements);
-
-  } catch (err) {
-    res.status(500).json({ error: "Failed to load announcements" });
-  }
-});
 app.post("/admin/delete-announcement", async (req, res) => {
   try {
 
@@ -376,7 +366,17 @@ app.post("/admin/delete-announcement", async (req, res) => {
       return res.status(403).json({ error: "Admin only" });
 
     const { id } = req.body;
+app.get("/announcements", async (req, res) => {
 
+  const announcements = await Announcement.find({
+    publishAt: { $lte: new Date() }
+  })
+  .sort({ publishAt: -1 })
+  .limit(5);
+
+  res.json(announcements);
+
+});
     await Announcement.findByIdAndDelete(id);
 
     res.json({ message: "Announcement deleted" });
