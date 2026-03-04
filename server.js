@@ -303,27 +303,27 @@ app.post("/admin/action", async (req, res) => {
 });
 /* ================= CREATE LIVE CLASS ================= */
 
-app.post("/admin/create-class", async (req, res) => {
+/* ================= GET LIVE CLASSES ================= */
+
+app.get("/classes", async (req, res) => {
   try {
     const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: "No token" });
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
 
-    if (decoded.role !== "admin")
-      return res.status(403).json({ error: "Access denied" });
+    const classes = await LiveClass.find().sort({ date: 1 });
 
-    const { title, description, date, meetLink } = req.body;
+    const updatedClasses = classes.map(cls => ({
+      ...cls._doc,
+      canJoin: user.isPaid
+    }));
 
-    await LiveClass.create({
-      title,
-      description,
-      date: new Date(date + ":00"),
-      meetLink
-    });
-
-    res.json({ message: "Live class created" });
+    res.json(updatedClasses);
 
   } catch (err) {
-    res.status(500).json({ error: "Failed to create class" });
+    res.status(401).json({ error: "Invalid token" });
   }
 });
 
