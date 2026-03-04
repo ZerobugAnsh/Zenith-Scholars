@@ -191,14 +191,20 @@ app.get("/classes", async (req, res) => {
     if (!token) return res.status(401).json({ error: "No token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const user = await User.findById(decoded.id);
 
     const classes = await LiveClass.find().sort({ date: 1 });
 
-    // Attach paid status
     const updatedClasses = classes.map(cls => ({
-      ...cls._doc,
+      _id: cls._id,
+      title: cls.title,
+      description: cls.description,
+      date: cls.date,
+      createdAt: cls.createdAt,
+
+      // 🔐 Hide meet link from unpaid users
+      meetLink: user.isPaid ? cls.meetLink : null,
+
       canJoin: user.isPaid
     }));
 
