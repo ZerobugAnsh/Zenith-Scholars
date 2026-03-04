@@ -9,6 +9,21 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+.live-badge {
+  background: red;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(255,0,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+}
 .join-link {
   color: #c084fc;
   text-decoration: none;
@@ -347,49 +362,58 @@ document.addEventListener("DOMContentLoaded", function() {
   classes.forEach(cls => {
 
     const classDate = new Date(cls.date);
-    const liveEndTime = new Date(classDate.getTime() + 60 * 60 * 1000);
-    const formattedDate = classDate.toLocaleString();
+const now = new Date();
 
-    let buttonHTML = "";
-    let statusBadge = "";
+const classStart = classDate.getTime();
+const classEnd = classStart + 60 * 60 * 1000; // 1 hour class
+const current = now.getTime();
 
-    if (now >= classDate && now <= liveEndTime) {
+let buttonHTML = "";
+let statusBadge = "";
 
-      if (cls.canJoin === true) {
-        statusBadge = `<span class="live-badge">LIVE NOW</span>`;
-        buttonHTML = `
-          <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
-            Join Now
-          </a>
-        `;
-      } else {
-        statusBadge = `<span class="premium-badge">Premium Only</span>`;
-        buttonHTML = `
-          <button class="join-btn disabled-btn" disabled>
-            🔒 Upgrade to Join
-          </button>
-        `;
-      }
+if (current >= classStart && current <= classEnd) {
 
-    } else if (now < classDate) {
+  statusBadge = `<span class="live-badge">LIVE NOW</span>`;
 
-      statusBadge = `<span class="countdown" data-date="${cls.date}"></span>`;
-      buttonHTML = `
-        <button class="join-btn disabled-btn" disabled>
-          Not Started
-        </button>
-      `;
+  if (cls.canJoin) {
+    buttonHTML = `
+      <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
+        Join Now
+      </a>
+    `;
+  } else {
+    buttonHTML = `
+      <button class="join-btn disabled-btn" disabled>
+        🔒 Premium Only
+      </button>
+    `;
+  }
 
-    } else {
+} 
+else if (current < classStart) {
 
-      statusBadge = `<span class="live-badge">ENDED</span>`;
-      buttonHTML = `
-        <button class="join-btn disabled-btn" disabled>
-          Class Ended
-        </button>
-      `;
-    }
+  statusBadge = `<span class="countdown" data-date="${cls.date}"></span>`;
 
+  buttonHTML = `
+    <button class="join-btn disabled-btn" disabled>
+      Not Started
+    </button>
+  `;
+
+} 
+else {
+
+  statusBadge = `<span class="live-badge">ENDED</span>`;
+
+  buttonHTML = `
+    <button class="join-btn disabled-btn" disabled>
+      Class Ended
+    </button>
+  `;
+
+}
+
+    
     container.innerHTML += `
       <div class="live-class">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -410,30 +434,36 @@ document.addEventListener("DOMContentLoaded", function() {
   
 
 function startCountdowns() {
+
   const countdownElements = document.querySelectorAll(".countdown");
 
   countdownElements.forEach(el => {
-    const targetDate = new Date(el.getAttribute("data-date"));
+
+    const target = new Date(el.getAttribute("data-date")).getTime();
 
     function update() {
-      const now = new Date();
-      const diff = targetDate - now;
+
+      const now = new Date().getTime();
+      const diff = target - now;
 
       if (diff <= 0) {
         el.innerText = "Starting...";
+        location.reload(); // auto refresh when class begins
         return;
       }
 
       const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff / (1000 * 60)) % 60);
-      const seconds = Math.floor((diff / 1000) % 60);
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
       el.innerText = `Starts in ${hours}h ${minutes}m ${seconds}s`;
     }
 
     update();
     setInterval(update, 1000);
+
   });
+
 }
   loadClasses();
 
