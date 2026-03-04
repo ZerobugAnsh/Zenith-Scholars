@@ -338,7 +338,7 @@ async function loadClasses() {
   classes.forEach(cls => {
     const classDate = new Date(cls.date);
     const timeDiff = classDate - now;
-    const isLive = timeDiff <= 0 && timeDiff > -2 * 60 * 60 * 1000; // live within 2 hours
+    const isLive = now >= classDate && now <= new Date(classDate.getTime() + 3 * 60 * 60 * 1000);
     const isUpcoming = timeDiff > 0;
 
     let buttonHTML = "";
@@ -359,9 +359,9 @@ async function loadClasses() {
         </button>
       `;
     } else {
-      return; // Hide expired classes
-    }
-
+  statusBadge = `<span style="color:#888;">Class Ended</span>`;
+  buttonHTML = `<button class="join-btn disabled-btn" disabled>Ended</button>`;
+}
     container.innerHTML += `
       <div class="live-class">
         <strong>${cls.title}</strong> ${statusBadge}<br>

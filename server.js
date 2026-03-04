@@ -296,7 +296,7 @@ app.post("/admin/create-class", async (req, res) => {
     await LiveClass.create({
       title,
       description,
-      date,
+      date: new Date(date + ":00"),
       meetLink
     });
 
