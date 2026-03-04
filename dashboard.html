@@ -347,8 +347,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
   async function loadClasses() {
+
   const res = await fetch("https://zenithscholars-u2fa.onrender.com/classes", {
-    headers: { "Authorization": localStorage.getItem("token") }
+    headers: { Authorization: localStorage.getItem("token") }
   });
 
   const classes = await res.json();
@@ -357,66 +358,46 @@ document.addEventListener("DOMContentLoaded", function() {
   container.className = "card";
   container.innerHTML = "<h3 class='section-title'>Live Classes</h3>";
 
-  const now = new Date();
+  const now = Date.now();
 
   classes.forEach(cls => {
 
-    const classDate = new Date(cls.date);
-const now = new Date();
+    const classStart = new Date(cls.date).getTime();
+    const classEnd = classStart + 60 * 60 * 1000;
 
-const classStart = classDate.getTime();
-const classEnd = classStart + 60 * 60 * 1000; // 1 hour class
-const current = now.getTime();
+    let statusBadge = "";
+    let buttonHTML = "";
 
-let buttonHTML = "";
-let statusBadge = "";
+    if (now >= classStart && now <= classEnd) {
 
-if (current >= classStart && current <= classEnd) {
+      statusBadge = `<span class="live-badge">LIVE NOW</span>`;
 
-  statusBadge = `<span class="live-badge">LIVE NOW</span>`;
+      buttonHTML = cls.canJoin
+        ? `<a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">Join Now</a>`
+        : `<button class="join-btn disabled-btn" disabled>🔒 Premium Only</button>`;
 
-  if (cls.canJoin) {
-    buttonHTML = `
-      <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
-        Join Now
-      </a>
-    `;
-  } else {
-    buttonHTML = `
-      <button class="join-btn disabled-btn" disabled>
-        🔒 Premium Only
-      </button>
-    `;
-  }
+    }
+    else if (now < classStart) {
 
-} 
-else if (current < classStart) {
+      statusBadge = `<span class="countdown" data-date="${cls.date}"></span>`;
 
-  statusBadge = `<span class="countdown" data-date="${cls.date}"></span>`;
+      buttonHTML = `<button class="join-btn disabled-btn" disabled>Not Started</button>`;
 
-  buttonHTML = `
-    <button class="join-btn disabled-btn" disabled>
-      Not Started
-    </button>
-  `;
+    }
+    else {
 
-} 
-else {
+      statusBadge = `<span class="live-badge">ENDED</span>`;
 
-  statusBadge = `<span class="live-badge">ENDED</span>`;
+      buttonHTML = `<button class="join-btn disabled-btn" disabled>Class Ended</button>`;
+    }
 
-  buttonHTML = `
-    <button class="join-btn disabled-btn" disabled>
-      Class Ended
-    </button>
-  `;
+    const formattedDate = new Date(cls.date).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata"
+    });
 
-}
-
-    
     container.innerHTML += `
       <div class="live-class">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
           <strong>${cls.title}</strong>
           ${statusBadge}
         </div>
@@ -424,12 +405,15 @@ else {
         ${buttonHTML}
       </div>
     `;
+
   });
 
   document.querySelector(".container").appendChild(container);
 
   startCountdowns();
-};
+}
+ 
+
 
   
 
