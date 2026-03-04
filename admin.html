@@ -369,7 +369,7 @@ async function deleteAnnouncement(id){
       "Content-Type":"application/json",
       "Authorization":localStorage.getItem("token")
     },
-    body:JSON.stringify({id})
+   body: JSON.stringify({ id: id })
   });
 
   loadAnnouncementsAdmin();

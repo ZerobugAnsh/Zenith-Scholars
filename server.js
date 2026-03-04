@@ -386,17 +386,26 @@ app.post("/admin/delete-announcement", async (req, res) => {
   }
 });
 app.get("/admin/announcements", async (req, res) => {
+  try {
 
-  const token = extractToken(req);
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: "No token" });
 
-  if (decoded.role !== "admin")
-    return res.status(403).json({ error: "Admin only" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-  const announcements = await Announcement.find().sort({ createdAt: -1 });
+    if (decoded.role !== "admin")
+      return res.status(403).json({ error: "Admin only" });
 
-  res.json(announcements);
+    const announcements = await Announcement
+      .find()
+      .sort({ createdAt: -1 });
 
+    res.json(announcements);
+
+  } catch (err) {
+    console.log("ADMIN ANNOUNCEMENTS ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 /* ================= RAZORPAY ================= */
