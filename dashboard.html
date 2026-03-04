@@ -14,6 +14,62 @@
   text-decoration: none;
   font-weight: 500;
 }
+.live-class {
+  margin-top: 15px;
+  padding: 15px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+}
+
+.join-btn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 8px 20px;
+  border-radius: 25px;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.join-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(168,85,247,0.5);
+}
+
+.disabled-btn {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.live-btn {
+  animation: pulse 1.5s infinite;
+}
+
+.live-badge {
+  background: red;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  margin-left: 10px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(255,0,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+}
+
+.countdown {
+  margin-left: 10px;
+  font-size: 13px;
+  color: #facc15;
+}
 
 .join-link:hover {
   text-decoration: underline;
@@ -277,19 +333,74 @@ async function loadClasses() {
   container.className = "card";
   container.innerHTML = "<h3>Live Classes</h3>";
 
+  const now = new Date();
+
   classes.forEach(cls => {
+    const classDate = new Date(cls.date);
+    const timeDiff = classDate - now;
+    const isLive = timeDiff <= 0 && timeDiff > -2 * 60 * 60 * 1000; // live within 2 hours
+    const isUpcoming = timeDiff > 0;
+
+    let buttonHTML = "";
+    let statusBadge = "";
+
+    if (isLive) {
+      statusBadge = `<span class="live-badge">LIVE NOW</span>`;
+      buttonHTML = `
+        <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
+          Join Now
+        </a>
+      `;
+    } else if (isUpcoming) {
+      statusBadge = `<span class="countdown" data-date="${cls.date}"></span>`;
+      buttonHTML = `
+        <button class="join-btn disabled-btn" disabled>
+          Starts Soon
+        </button>
+      `;
+    } else {
+      return; // Hide expired classes
+    }
+
     container.innerHTML += `
-      <p><strong>${cls.title}</strong><br>
-      ${new Date(cls.date).toLocaleString()}<br>
-      <a href="${cls.meetLink}" target="_blank" class="join-link">Join Class</a>
-      </p>
+      <div class="live-class">
+        <strong>${cls.title}</strong> ${statusBadge}<br>
+        ${classDate.toLocaleString()}<br>
+        ${buttonHTML}
+      </div>
     `;
   });
 
   document.querySelector(".container").appendChild(container);
-}
 
-loadClasses();
+  startCountdowns();
+}
+function startCountdowns() {
+  const countdownElements = document.querySelectorAll(".countdown");
+
+  countdownElements.forEach(el => {
+    const targetDate = new Date(el.getAttribute("data-date"));
+
+    function update() {
+      const now = new Date();
+      const diff = targetDate - now;
+
+      if (diff <= 0) {
+        el.innerText = "Starting...";
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      el.innerText = `Starts in ${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    update();
+    setInterval(update, 1000);
+  });
+}
 </script>
 
 </body>
