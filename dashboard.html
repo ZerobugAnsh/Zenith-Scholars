@@ -330,7 +330,8 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
 });
-async function loadClasses() {
+
+  async function loadClasses() {
   const res = await fetch("https://zenithscholars-u2fa.onrender.com/classes", {
     headers: { "Authorization": localStorage.getItem("token") }
   });
@@ -339,59 +340,75 @@ async function loadClasses() {
 
   const container = document.createElement("div");
   container.className = "card";
-  container.innerHTML = "<h3>Live Classes</h3>";
+  container.innerHTML = "<h3 class='section-title'>Live Classes</h3>";
 
   const now = new Date();
 
   classes.forEach(cls => {
+
     const classDate = new Date(cls.date);
-    const timeDiff = classDate - now;
-    const isLive = now >= classDate && now <= new Date(classDate.getTime() + 3 * 60 * 60 * 1000);
-    const isUpcoming = timeDiff > 0;
+    const liveEndTime = new Date(classDate.getTime() + 60 * 60 * 1000);
+    const formattedDate = classDate.toLocaleString();
 
     let buttonHTML = "";
     let statusBadge = "";
 
     if (now >= classDate && now <= liveEndTime) {
 
-  if (cls.canJoin) {
-    statusBadge = `<span class="live-badge">LIVE NOW</span>`;
-    buttonHTML = `
-      <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
-        Join Now
-      </a>
+      if (cls.canJoin === true) {
+        statusBadge = `<span class="live-badge">LIVE NOW</span>`;
+        buttonHTML = `
+          <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
+            Join Now
+          </a>
+        `;
+      } else {
+        statusBadge = `<span class="premium-badge">Premium Only</span>`;
+        buttonHTML = `
+          <button class="join-btn disabled-btn" disabled>
+            🔒 Upgrade to Join
+          </button>
+        `;
+      }
+
+    } else if (now < classDate) {
+
+      statusBadge = `<span class="countdown" data-date="${cls.date}"></span>`;
+      buttonHTML = `
+        <button class="join-btn disabled-btn" disabled>
+          Not Started
+        </button>
+      `;
+
+    } else {
+
+      statusBadge = `<span class="live-badge">ENDED</span>`;
+      buttonHTML = `
+        <button class="join-btn disabled-btn" disabled>
+          Class Ended
+        </button>
+      `;
+    }
+
+    container.innerHTML += `
+      <div class="live-class">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>${cls.title}</strong>
+          ${statusBadge}
+        </div>
+        <p>${formattedDate}</p>
+        ${buttonHTML}
+      </div>
     `;
-  } else {
-    statusBadge = `<span class="premium-badge">Premium Only</span>`;
-    buttonHTML = `
-      <button class="join-btn disabled-btn" disabled>
-        🔒 Upgrade to Join
-      </button>
-    `;
-  }
-}
-    classesContainer.innerHTML += `
-  <div class="class-card">
-
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h4>${cls.title}</h4>
-      ${statusBadge}
-    </div>
-
-    <p>${formattedDate}</p>
-
-    <div style="margin-top:10px;">
-      ${buttonHTML}
-    </div>
-
-  </div>
-`;
   });
 
   document.querySelector(".container").appendChild(container);
 
   startCountdowns();
-}
+};
+
+  
+
 function startCountdowns() {
   const countdownElements = document.querySelectorAll(".countdown");
 
