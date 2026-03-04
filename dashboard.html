@@ -9,6 +9,15 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+.join-link {
+  color: #c084fc;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.join-link:hover {
+  text-decoration: underline;
+}
 
 body{
 min-height:100vh;
@@ -272,7 +281,7 @@ async function loadClasses() {
     container.innerHTML += `
       <p><strong>${cls.title}</strong><br>
       ${new Date(cls.date).toLocaleString()}<br>
-      <a href="${cls.meetLink}" target="_blank" style="color:#c084fc;">Join Class</a>
+      <a href="${cls.meetLink}" target="_blank" class="join-link">Join Class</a>
       </p>
     `;
   });
