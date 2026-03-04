@@ -376,7 +376,7 @@ async function deleteAnnouncement(id){
     },
    body: JSON.stringify({ id: id })
   });
-
+loadAdmin();
   loadAnnouncementsAdmin();
 
 }
