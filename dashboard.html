@@ -13,7 +13,15 @@
   color: #c084fc;
   text-decoration: none;
   font-weight: 500;
+}.premium-badge {
+  background: linear-gradient(90deg,#f59e0b,#ef4444);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  margin-left: 10px;
 }
+
 .live-class {
   margin-top: 15px;
   padding: 15px;
@@ -344,23 +352,23 @@ async function loadClasses() {
     let buttonHTML = "";
     let statusBadge = "";
 
-    if (isLive) {
-      statusBadge = `<span class="live-badge">LIVE NOW</span>`;
-      buttonHTML = `
-        <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
-          Join Now
-        </a>
-      `;
-    } else if (isUpcoming) {
-      statusBadge = `<span class="countdown" data-date="${cls.date}"></span>`;
-      buttonHTML = `
-        <button class="join-btn disabled-btn" disabled>
-          Starts Soon
-        </button>
-      `;
-    } else {
-  statusBadge = `<span style="color:#888;">Class Ended</span>`;
-  buttonHTML = `<button class="join-btn disabled-btn" disabled>Ended</button>`;
+    if (now >= classDate && now <= liveEndTime) {
+
+  if (cls.canJoin) {
+    statusBadge = `<span class="live-badge">LIVE NOW</span>`;
+    buttonHTML = `
+      <a href="${cls.meetLink}" target="_blank" class="join-btn live-btn">
+        Join Now
+      </a>
+    `;
+  } else {
+    statusBadge = `<span class="premium-badge">Premium Only</span>`;
+    buttonHTML = `
+      <button class="join-btn disabled-btn" disabled>
+        🔒 Upgrade to Join
+      </button>
+    `;
+  }
 }
     container.innerHTML += `
       <div class="live-class">

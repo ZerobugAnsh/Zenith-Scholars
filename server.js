@@ -183,22 +183,31 @@ app.post("/login", async (req, res) => {
 });
 /* ================= GET LIVE CLASSES ================= */
 
+/* ================= GET LIVE CLASSES ================= */
+
 app.get("/classes", async (req, res) => {
   try {
     const token = extractToken(req);
     if (!token) return res.status(401).json({ error: "No token" });
 
-    jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id);
 
     const classes = await LiveClass.find().sort({ date: 1 });
 
-    res.json(classes);
+    // Attach paid status
+    const updatedClasses = classes.map(cls => ({
+      ...cls._doc,
+      canJoin: user.isPaid
+    }));
 
-  } catch {
+    res.json(updatedClasses);
+
+  } catch (err) {
     res.status(401).json({ error: "Invalid token" });
   }
 });
-
 /* ================= DASHBOARD ================= */
 
 app.get("/dashboard", async (req, res) => {
