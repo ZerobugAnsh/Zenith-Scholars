@@ -370,13 +370,22 @@ async function loadClasses() {
     `;
   }
 }
-    container.innerHTML += `
-      <div class="live-class">
-        <strong>${cls.title}</strong> ${statusBadge}<br>
-        ${classDate.toLocaleString()}<br>
-        ${buttonHTML}
-      </div>
-    `;
+    classesContainer.innerHTML += `
+  <div class="class-card">
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h4>${cls.title}</h4>
+      ${statusBadge}
+    </div>
+
+    <p>${formattedDate}</p>
+
+    <div style="margin-top:10px;">
+      ${buttonHTML}
+    </div>
+
+  </div>
+`;
   });
 
   document.querySelector(".container").appendChild(container);
